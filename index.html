@@ -120,9 +120,6 @@
   // How often to re-check for a new APOD (ms). 6 hours is plenty since it updates once a day.
   var REFRESH_INTERVAL = 6 * 60 * 60 * 1000;
 
-  // localStorage key for simple caching across reloads
-  var CACHE_KEY = "apod_dakboard_cache_v1";
-
   var statusEl = document.getElementById("apod-status");
   var mediaWrap = document.getElementById("apod-media-wrap");
   var overlay = document.getElementById("apod-overlay");
@@ -181,38 +178,7 @@
     overlay.classList.remove("apod-hidden");
   }
 
-  function todayStr() {
-    var d = new Date();
-    var mm = String(d.getMonth() + 1).padStart(2, "0");
-    var dd = String(d.getDate()).padStart(2, "0");
-    return d.getFullYear() + "-" + mm + "-" + dd;
-  }
-
-  function getCache() {
-    try {
-      var raw = localStorage.getItem(CACHE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function setCache(data) {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedFor: todayStr(), data: data }));
-    } catch (e) {
-      /* ignore quota errors */
-    }
-  }
-
   function fetchApod() {
-    // Use cached data if we already fetched today's APOD successfully
-    var cached = getCache();
-    if (cached && cached.fetchedFor === todayStr() && cached.data) {
-      render(cached.data);
-      return;
-    }
-
     fetch(API_URL)
       .then(function (res) {
         if (!res.ok) {
@@ -221,17 +187,10 @@
         return res.json();
       })
       .then(function (data) {
-        setCache(data);
         render(data);
       })
       .catch(function (err) {
-        // Fall back to last known good data if the request fails (e.g. rate limit)
-        var fallback = getCache();
-        if (fallback && fallback.data) {
-          render(fallback.data);
-        } else {
-          showStatus("Couldn't load today's Astronomy Picture of the Day.\n(" + err.message + ")");
-        }
+        showStatus("Couldn't load today's Astronomy Picture of the Day.\n(" + err.message + ")");
       });
   }
 
